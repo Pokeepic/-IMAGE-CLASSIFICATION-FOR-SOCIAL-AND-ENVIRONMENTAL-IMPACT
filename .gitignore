@@ -1,2 +1,11 @@
-coral_vgg19.keras
-vgg19_best.keras
+# model files
+*.keras
+*.h5
+
+# virtual env
+.venv/
+__pycache__/
+
+# datasets / cache
+.cache/
+kagglehub/
