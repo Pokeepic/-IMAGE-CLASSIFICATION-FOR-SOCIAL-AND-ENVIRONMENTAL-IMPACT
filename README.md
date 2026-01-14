@@ -1,6 +1,6 @@
 # Coral Reef Image Classification (Environmental Impact)
 
-This project builds an image classification system to support **coral reef monitoring** by automatically classifying reef images into key categories. Manual reef assessment is time-consuming and requires expert knowledge; a CNN-based classifier can help scale monitoring efforts for conservation and environmental decision-making.
+This project builds an image classification system to support **coral reef monitoring** by automatically classifying reef images into reef-related categories. Manual monitoring is slow and requires expert knowledge; a CNN-based classifier can scale analysis for conservation and environmental decision-making.
 
 ---
 
@@ -11,55 +11,84 @@ This project builds an image classification system to support **coral reef monit
   - `sand`
 - Implement and compare **two CNN approaches**:
   1) **Custom Lightweight CNN** (built from scratch)
-  2) **Transfer Learning (VGG19)** using ImageNet pretrained weights
+  2) **Transfer Learning (VGG19)** (pretrained ImageNet backbone)
 - Evaluate using:
   - Accuracy
-  - Precision / Recall / F1-score
+  - Precision / Recall / F1-score (per class)
   - Confusion Matrix
-- Provide a **demo** showing predictions + confidence scores on unseen images.
+- Provide a **demo** showing prediction outputs with confidence scores.
 
 ---
 
 ## Dataset
 - Source: Kaggle dataset `jxwleong/coral-reef-dataset`
-- Annotation file used: `combined_annotations_remapped.csv`
+- Annotation file: `combined_annotations_remapped.csv`
 
-The dataset contains point annotations. For image-level classification, annotations are aggregated per image (majority label per image). A cleaning step is applied to:
-- remove junk columns (e.g., `Unnamed`)
-- normalize label strings (strip/lowercase)
-- keep only selected classes
-- map `filename -> filepath`
-- drop images without valid file matches
-- (optional) remove uncertain images where the majority label ratio is below a threshold.
+The dataset contains **point-level annotations**. For image-level classification, annotations were aggregated per image (majority label per image). Data preparation includes:
+- removing junk columns (e.g., `Unnamed`)
+- standardizing label text (strip/lowercase)
+- selecting only the target classes
+- mapping `filename -> filepath`
+- dropping entries with missing/unmatched images
+- (optional) filtering “uncertain” images using a majority-threshold strategy
 
 ---
 
-## Approach Overview
+## Pipeline Summary
+1. **Load & clean CSV annotations**
+2. **Select 3 target classes**
+3. **Create image-level labels** (majority vote per image)
+4. **Stratified Train/Validation/Test split**
+5. **Preprocessing**: resize to 224×224 and normalize
+6. **Train 2 models**: Custom CNN and VGG19 transfer learning
+7. **Evaluate** using classification report + confusion matrix
+8. **Demo**: show predicted label + confidence on unseen images
 
-### 1) Custom Lightweight CNN
-A compact CNN (Conv → BN → MaxPool blocks + GAP + Dense) trained end-to-end for fast training and baseline comparison.
+---
+
+## Models
+
+### 1) Custom Lightweight CNN (from scratch)
+A compact CNN (Conv → BatchNorm → MaxPool blocks + GAP + Dense head).
+This model trains quickly but requires careful balancing and preprocessing consistency.
+
+**Observed behaviour (current run):**
+- Training accuracy increased, but validation accuracy remained very low.
+- The model collapsed to predicting a single class (`sand`) for most/all samples.
+- Confusion matrix confirms near-all predictions were `sand`.
+
+This indicates poor generalization under class imbalance and limited feature learning from scratch.
 
 ### 2) Transfer Learning (VGG19)
-VGG19 pretrained on ImageNet is used as a feature extractor with a custom classification head. (Optional fine-tuning can be applied with a smaller learning rate.)
+VGG19 pretrained on ImageNet is used as a feature extractor with a custom classification head.
+This approach achieved strong generalization and significantly better per-class performance.
 
 ---
 
-## Results (Example)
-Your exact results may vary depending on class balancing, split seed, and training settings.
+## Results (Current Run)
 
-- Test Accuracy: ~0.90
-- Macro F1-score: ~0.82
-- Confusion matrix shows most errors occur between visually similar reef textures (e.g., `porites` vs `crustose_coralline_algae`).
+### Custom CNN (from scratch)
+- Validation accuracy: ~0.10–0.15 (low)
+- Test accuracy: ~0.15
+- Confusion matrix: model predicts mostly `sand`
+- Per-class F1-score: near 0.00 for `crustose_coralline_algae` and `porites`
+
+### VGG19 Transfer Learning
+- Validation accuracy improved steadily during training
+- Test performance is significantly better across classes
+- Confusion matrix shows most samples are correctly classified
+- Much higher macro and weighted F1 compared to Custom CNN
+
+> Note: Results can vary depending on random seed, class balancing strategy, and train/val/test split.
 
 ---
 
 ## Demo
-The demo displays predictions on unseen images in a grid:
-- True label
-- Predicted label
-- Confidence score
+The demo shows predictions on unseen images with confidence scores in the format:
+- `True: <label>`
+- `Pred: <label> (<confidence>)`
 
-Example format:
+Example:
 > `True: porites`  
 > `Pred: porites (0.98)`
 
